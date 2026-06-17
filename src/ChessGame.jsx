@@ -11,9 +11,10 @@ function formatTime(ms) {
   return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 }
 function formatPoints(p) {
+  if (!p && p !== 0) return "0";
   if (p >= 1000000) return (p/1000000).toFixed(1) + "M";
   if (p >= 1000) return (p/1000).toFixed(1) + "K";
-  return p?.toString() || "0";
+  return Math.floor(p).toLocaleString();
 }
 function getRatingCategory(r) {
   if (r >= 2400) return { label:"Master", color:"#ffd700" };
