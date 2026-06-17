@@ -357,11 +357,11 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh,
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
             <div style={{ fontWeight:"bold", fontSize:"1.1rem" }}>{user.displayName || user.username}</div>
-            <div style={{ color:cat.color, fontSize:"0.9rem" }}>⭐ {user.rating} <span style={{ opacity:0.7 }}>({cat.label})</span></div>
+            <div style={{ color:"#e0e0ff", fontSize:"0.95rem", fontWeight:"500" }}>⭐ {user.rating} <span style={{ color:cat.color }}>({cat.label})</span></div>
           </div>
           <div style={{ textAlign:"right" }}>
             <div style={{ color:"#ffd700", fontWeight:"bold", fontSize:"1.1rem" }}>🪙 {formatPoints(user.points)}</div>
-            <div style={{ color:"#8080a0", fontSize:"0.75rem" }}>Referral: {user.referralCode}</div>
+            <div style={{ color:"#a0c0ff", fontSize:"0.85rem", fontWeight:"500", marginTop:"2px" }}>🔗 {user.referralCode}</div>
           </div>
         </div>
         <div style={{ display:"flex", gap:"6px", marginTop:"8px", flexWrap:"wrap" }}>
@@ -487,6 +487,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
         <span style={styles.roomBadge}>🏠 {roomId}</span>
         {(user?.points !== undefined || myPoints !== undefined) && <span style={{ ...styles.ratingBadge, color:"#ffd700" }}>🪙 {formatPoints(user?.points ?? myPoints)}</span>}
         {myRating && <span style={styles.ratingBadge}>⭐ {myRating}</span>}
+        {user?.referralCode && <span style={{ ...styles.ratingBadge, color:"#a0c0ff", fontSize:"0.75rem" }}>🔗 {user.referralCode}</span>}
         {totalBet > 0 && <span style={{ ...styles.ratingBadge, color:"#ff9f43" }}>🎰 {formatPoints(totalBet)}</span>}
         {!isLiveView && <span style={styles.reviewBadge}>🔍 Review</span>}
       </div>
