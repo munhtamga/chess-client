@@ -297,7 +297,7 @@ function MoveHistory({ moveHistory, currentIndex, onSelect }) {
 }
 
 // ── Lobby ──
-function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh }) {
+function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh, bonusMsg }) {
   const [roomId, setRoomId] = useState("");
   const [timeLimit, setTimeLimit] = useState(10);
   const [bet, setBet] = useState(0);
@@ -306,6 +306,7 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh 
   const [showAdmin, setShowAdmin] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [showTx, setShowTx] = useState(false);
+  const [notice, setNotice] = useState(bonusMsg || null);
   const cat = getRatingCategory(user.rating || 1200);
   const timeLimits = [{label:"5 min",value:5},{label:"10 min",value:10},{label:"15 min",value:15},{label:"30 min",value:30},{label:"60 min",value:60}];
 
@@ -343,6 +344,12 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh 
       )}
 
       <h1 style={styles.title}>♟️ Online Chess</h1>
+
+      {notice && (
+        <div style={{ background:"rgba(74,124,89,0.3)", border:"1px solid rgba(74,124,89,0.6)", borderRadius:"10px", padding:"10px 20px", marginBottom:"0.5rem", color:"#90ffb0", fontSize:"0.95rem", textAlign:"center" }}>
+          {notice} <button onClick={() => setNotice(null)} style={{ background:"none", border:"none", color:"#90ffb0", cursor:"pointer", marginLeft:"8px", fontSize:"1rem" }}>✕</button>
+        </div>
+      )}
 
       {/* User info */}
       <div style={styles.userCard}>
@@ -561,14 +568,22 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
 // ── Main ──
 export default function ChessGame() {
   const { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw } = useChessSocket();
+  const [bonusMsg, setBonusMsg] = React.useState(null);
 
   const handleRegister = async (username, password, displayName, referralCode) => {
     const res = await register(username, password, displayName, referralCode);
+    if (res && res.success) setBonusMsg(`🎉 Бүртгэлийн бонус: +${(10000).toLocaleString()} оноо авлаа!`);
     return res;
   };
 
-  if (!user) return <AuthScreen onLogin={login} onRegister={handleRegister} error={authError} loading={authLoading} />;
-  if (gameState.status === "idle") return <LobbyScreen user={user} onJoin={joinRoom} onLogout={logout} onTransfer={transferPoints} connected={connected} onRefresh={refreshUser} />;
+  const handleLogin = async (username, password) => {
+    const res = await login(username, password);
+    if (res && res.loginBonus && res.loginBonus.claimed) setBonusMsg(`🌟 Өдрийн бонус: +${res.loginBonus.bonus.toLocaleString()} оноо авлаа!`);
+    return res;
+  };
+
+  if (!user) return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} error={authError} loading={authLoading} />;
+  if (gameState.status === "idle") return <LobbyScreen user={user} onJoin={joinRoom} onLogout={logout} onTransfer={transferPoints} connected={connected} onRefresh={refreshUser} bonusMsg={bonusMsg} />;
   if (gameState.status === "waiting") return <WaitingScreen roomId={gameState.roomId} myColor={gameState.myColor} myRating={gameState.myRating} myPoints={gameState.myPoints} timeLimit={gameState.timeLimit} />;
   if (!gameState.myColor) return <WaitingScreen roomId={gameState.roomId} myColor={null} myRating={gameState.myRating} myPoints={gameState.myPoints} timeLimit={gameState.timeLimit} />;
   return <GameScreen gameState={gameState} user={user} onMove={makeMove} onResign={resign} onRestart={restartGame} onOfferDraw={offerDraw} onAcceptDraw={acceptDraw} onDeclineDraw={declineDraw} onRefresh={refreshUser} />;
