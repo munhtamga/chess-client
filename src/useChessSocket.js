@@ -37,8 +37,11 @@ export function useChessSocket() {
     });
     socket.on("disconnect", () => setConnected(false));
     socket.on("authenticated", (data) => {
-      setUser(data);
-      localStorage.setItem("chess_user", JSON.stringify(data));
+      setUser((prev) => {
+        const updated = { ...prev, ...data };
+        localStorage.setItem("chess_user", JSON.stringify(updated));
+        return updated;
+      });
     });
     socket.on("authError", () => {
       localStorage.removeItem("chess_token");
