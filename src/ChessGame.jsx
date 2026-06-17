@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Chessboard } from "react-chessboard";
 import { useChessSocket } from "./useChessSocket";
 
@@ -453,7 +453,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
   const [viewIndex, setViewIndex] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
-  useEffect(() => { if (ratingChanges) { setShowRatingModal(true); onRefresh(); } }, [ratingChanges]);
+  useEffect(() => { if (ratingChanges) { setShowRatingModal(true); onRefresh(); } }, [ratingChanges, onRefresh]);
 
   const isLiveView = viewIndex === null;
   const displayFen = isLiveView ? fen : (moveHistory[viewIndex]?.fen || fen);
@@ -484,7 +484,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
 
       <div style={styles.header}>
         <span style={styles.roomBadge}>🏠 {roomId}</span>
-        {myPoints !== undefined && <span style={{ ...styles.ratingBadge, color:"#ffd700" }}>🪙 {formatPoints(myPoints)}</span>}
+        {(user?.points !== undefined || myPoints !== undefined) && <span style={{ ...styles.ratingBadge, color:"#ffd700" }}>🪙 {formatPoints(user?.points ?? myPoints)}</span>}
         {myRating && <span style={styles.ratingBadge}>⭐ {myRating}</span>}
         {totalBet > 0 && <span style={{ ...styles.ratingBadge, color:"#ff9f43" }}>🎰 {formatPoints(totalBet)}</span>}
         {!isLiveView && <span style={styles.reviewBadge}>🔍 Review</span>}
