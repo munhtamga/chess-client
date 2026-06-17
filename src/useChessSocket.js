@@ -47,7 +47,10 @@ export function useChessSocket() {
     });
 
     socket.on("joinedRoom", ({ roomId, color, playerName, playerRating, playerPoints, fen, message, timers, timeLimit, moveHistory }) => {
-      setGameState((prev) => ({ ...prev, roomId, myColor: color, myName: playerName, myRating: playerRating || 1200, myPoints: playerPoints || 0, fen, status: "waiting", message, isSpectator: false, timers: timers || prev.timers, timeLimit: timeLimit || prev.timeLimit, moveHistory: moveHistory || [], ratingChanges: null, escrowResult: null }));
+      setGameState((prev) => ({ ...prev, roomId, myColor: color, myName: playerName, myRating: playerRating || 1200, myPoints: playerPoints || 0, fen, status: "waiting", message, isSpectator: false, timers: timers || prev.timers, timeLimit: timeLimit || prev.timeLimit, moveHistory: moveHistory || [], ratingChanges: null, escrowResult: null,
+        // username-г gameOver харьцуулалтад ашиглах
+        myUsername: socket.username,
+      }));
     });
 
     socket.on("joinedAsSpectator", ({ roomId, fen, message, timers, timeLimit, moveHistory }) => {
@@ -68,14 +71,23 @@ export function useChessSocket() {
 
     socket.on("gameOver", ({ type, winner, message, ratingChanges, escrowResult }) => {
       setGameState((prev) => ({ ...prev, status: "finished", gameOver: { type, winner }, message, ratingChanges: ratingChanges || null, escrowResult: escrowResult || null }));
-      // User points шинэчлэх
+      // User rating болон points хоёуланг шинэчлэх
       if (ratingChanges) {
         setUser((prev) => {
           if (!prev) return prev;
-          const me = ratingChanges.white?.username === prev.username ? ratingChanges.white : ratingChanges.black;
+          const me = ratingChanges.white?.username === prev.username ? ratingChanges.white : ratingChanges.black?.username === prev.username ? ratingChanges.black : null;
           if (!me) return prev;
-          return { ...prev, rating: me.newRating };
+          const updatedUser = { ...prev, rating: me.newRating, points: (prev.points || 0) + (me.pointsChange || 0) };
+          localStorage.setItem("chess_user", JSON.stringify(updatedUser));
+          return updatedUser;
         });
+        // gameState-д ч шинэ rating харуулах
+        setGameState((prev) => ({
+          ...prev,
+          myRating: ratingChanges.white?.username === prev.myUsername ? ratingChanges.white.newRating
+                  : ratingChanges.black?.username === prev.myUsername ? ratingChanges.black.newRating
+                  : prev.myRating,
+        }));
       }
     });
 

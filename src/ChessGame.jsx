@@ -159,10 +159,10 @@ function AdminPanel({ onClose }) {
             {stats && (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:"8px", marginBottom:"1rem" }}>
                 {[
-                  { label:"Total Players", value: stats.totalplayers },
-                  { label:"Total Games", value: stats.totalgames },
-                  { label:"Platform Fees", value: formatPoints(stats.platformfees) },
-                  { label:"Total Points", value: formatPoints(stats.totalpoints) },
+                  { label:"Total Players", value: stats.totalPlayers ?? stats.totalplayers },
+                  { label:"Total Games", value: stats.totalGames ?? stats.totalgames },
+                  { label:"Platform Fees", value: formatPoints(stats.platformFees ?? stats.platformfees) },
+                  { label:"Total Points", value: formatPoints(stats.totalPoints ?? stats.totalpoints) },
                 ].map(s => (
                   <div key={s.label} style={{ background:"rgba(255,255,255,0.05)", padding:"8px 12px", borderRadius:"8px" }}>
                     <div style={{ fontSize:"0.75rem", color:"#a0a0c0" }}>{s.label}</div>
@@ -473,7 +473,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
 
   return (
     <div style={styles.gameContainer}>
-      {showRatingModal && <RatingModal ratingChanges={ratingChanges} escrowResult={escrowResult} myUsername={user?.username} onClose={() => setShowRatingModal(false)} />}
+      {showRatingModal && <RatingModal ratingChanges={ratingChanges} escrowResult={escrowResult} myUsername={user?.username} onClose={() => { setShowRatingModal(false); onRefresh(); }} />}
 
       <div style={styles.header}>
         <span style={styles.roomBadge}>🏠 {roomId}</span>
