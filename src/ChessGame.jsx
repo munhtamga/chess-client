@@ -446,7 +446,7 @@ function TimerDisplay({ time, isActive, color }) {
 }
 
 // ── Game Screen ──
-function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw, onAcceptDraw, onDeclineDraw, onRefresh }) {
+function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw, onAcceptDraw, onDeclineDraw, onRefresh, onGoLobby }) {
   const { fen, myColor, myRating, myPoints, turn, players, message, gameOver, inCheck, isSpectator, roomId, timers, moveHistory, drawOffer, ratingChanges, escrowResult, bets } = gameState;
   const isMyTurn = !isSpectator && myColor === turn;
   const selectedSquareRef = useRef(null);
@@ -555,6 +555,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
               {gameOver && <>
                 <button style={styles.btn} onClick={onRestart}>🔄 Play Again</button>
                 {ratingChanges && <button style={{ ...styles.btn,...styles.btnDraw }} onClick={() => setShowRatingModal(true)}>📊 Result</button>}
+                <button style={{ ...styles.btn, background:"linear-gradient(135deg,#2a4a7a,#1a2a5a)" }} onClick={onGoLobby}>🏠 Lobby</button>
               </>}
             </div>
           )}
@@ -568,7 +569,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
 
 // ── Main ──
 export default function ChessGame() {
-  const { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw } = useChessSocket();
+  const { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw, goToLobby } = useChessSocket();
   const [bonusMsg, setBonusMsg] = React.useState(null);
 
   const handleRegister = async (username, password, displayName, referralCode) => {
@@ -587,7 +588,7 @@ export default function ChessGame() {
   if (gameState.status === "idle") return <LobbyScreen user={user} onJoin={joinRoom} onLogout={logout} onTransfer={transferPoints} connected={connected} onRefresh={refreshUser} bonusMsg={bonusMsg} />;
   if (gameState.status === "waiting") return <WaitingScreen roomId={gameState.roomId} myColor={gameState.myColor} myRating={gameState.myRating} myPoints={gameState.myPoints} timeLimit={gameState.timeLimit} />;
   if (!gameState.myColor) return <WaitingScreen roomId={gameState.roomId} myColor={null} myRating={gameState.myRating} myPoints={gameState.myPoints} timeLimit={gameState.timeLimit} />;
-  return <GameScreen gameState={gameState} user={user} onMove={makeMove} onResign={resign} onRestart={restartGame} onOfferDraw={offerDraw} onAcceptDraw={acceptDraw} onDeclineDraw={declineDraw} onRefresh={refreshUser} />;
+  return <GameScreen gameState={gameState} user={user} onMove={makeMove} onResign={resign} onRestart={restartGame} onOfferDraw={offerDraw} onAcceptDraw={acceptDraw} onDeclineDraw={declineDraw} onRefresh={refreshUser} onGoLobby={() => { refreshUser(); goToLobby(); }} />;
 }
 
 const styles = {

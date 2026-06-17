@@ -77,7 +77,8 @@ export function useChessSocket() {
           if (!prev) return prev;
           const me = ratingChanges.white?.username === prev.username ? ratingChanges.white : ratingChanges.black?.username === prev.username ? ratingChanges.black : null;
           if (!me) return prev;
-          const updatedUser = { ...prev, rating: me.newRating, points: (prev.points || 0) + (me.pointsChange || 0) };
+          // points-г database-аас авах учир давхар нэмэхгүй, зөвхөн rating шинэчлэнэ
+          const updatedUser = { ...prev, rating: me.newRating };
           localStorage.setItem("chess_user", JSON.stringify(updatedUser));
           return updatedUser;
         });
@@ -173,6 +174,10 @@ export function useChessSocket() {
     } catch { return { success: false, error: "Server error" }; }
   }, []);
 
+  const goToLobby = useCallback(() => {
+    setGameState(INITIAL_GAME);
+  }, []);
+
   const joinRoom = useCallback((roomId, timeLimit, bet) => {
     socketRef.current?.emit("joinRoom", { roomId, timeLimit, bet });
     setGameState((prev) => ({ ...prev, status: "waiting", roomId }));
@@ -190,5 +195,5 @@ export function useChessSocket() {
   const acceptDraw = useCallback(() => { const { roomId } = gameStateRef.current; if (roomId) socketRef.current?.emit("acceptDraw", { roomId }); }, []);
   const declineDraw = useCallback(() => { const { roomId } = gameStateRef.current; if (roomId) socketRef.current?.emit("declineDraw", { roomId }); }, []);
 
-  return { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw };
+  return { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw, goToLobby };
 }
