@@ -11,10 +11,10 @@ function formatTime(ms) {
   return `${Math.floor(s/60)}:${(s%60).toString().padStart(2,"0")}`;
 }
 function formatPoints(p) {
-  if (!p && p !== 0) return "0";
-  if (p >= 1000000) return (p/1000000).toFixed(1) + "M";
-  if (p >= 1000) return (p/1000).toFixed(1) + "K";
-  return Math.floor(p).toLocaleString();
+  const n = Number(p) || 0;
+  if (n >= 1000000) return (n/1000000).toFixed(1) + "M";
+  if (n >= 1000) return (n/1000).toFixed(1) + "K";
+  return n.toLocaleString();
 }
 function getRatingCategory(r) {
   if (r >= 2400) return { label:"Master", color:"#ffd700" };
@@ -26,17 +26,16 @@ function getRatingCategory(r) {
   return { label:"Beginner", color:"#8080a0" };
 }
 
-// ── Auth Screen ──
+// ── Auth ──
 function AuthScreen({ onLogin, onRegister, error, loading }) {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [referralCode, setReferralCode] = useState("");
 
   const handleSubmit = () => {
     if (mode === "login") onLogin(username, password);
-    else onRegister(username, password, displayName, referralCode);
+    else onRegister(username, password, referralCode);
   };
 
   return (
@@ -48,31 +47,25 @@ function AuthScreen({ onLogin, onRegister, error, loading }) {
           <button style={{ ...styles.tab, ...(mode==="login"?styles.tabActive:{}) }} onClick={() => setMode("login")}>Login</button>
           <button style={{ ...styles.tab, ...(mode==="register"?styles.tabActive:{}) }} onClick={() => setMode("register")}>Register</button>
         </div>
-        {mode === "register" && (
-          <>
-            <div style={styles.field}>
-              <label style={styles.label}>Display name</label>
-              <input style={styles.input} value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Shown to others" maxLength={20} />
-            </div>
-            <div style={styles.field}>
-              <label style={styles.label}>Referral code (optional)</label>
-              <input style={styles.input} value={referralCode} onChange={(e) => setReferralCode(e.target.value.toUpperCase())} placeholder="Friend's referral code" maxLength={10} />
-            </div>
-          </>
-        )}
         <div style={styles.field}>
           <label style={styles.label}>Username</label>
-          <input style={styles.input} value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" maxLength={20} onKeyDown={(e) => e.key==="Enter"&&handleSubmit()} />
+          <input style={styles.input} value={username} onChange={e=>setUsername(e.target.value)} placeholder="Username (min 3 chars)" maxLength={20} onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
         </div>
         <div style={styles.field}>
           <label style={styles.label}>Password</label>
-          <input style={styles.input} type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" onKeyDown={(e) => e.key==="Enter"&&handleSubmit()} />
+          <input style={styles.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password (min 6 chars)" onKeyDown={e=>e.key==="Enter"&&handleSubmit()} />
         </div>
+        {mode === "register" && (
+          <div style={styles.field}>
+            <label style={styles.label}>Referral code (optional)</label>
+            <input style={styles.input} value={referralCode} onChange={e=>setReferralCode(e.target.value.toUpperCase())} placeholder="Friend's referral code" maxLength={10} />
+          </div>
+        )}
         {error && <div style={styles.errorMsg}>⚠️ {error}</div>}
         <button style={{ ...styles.btn, width:"100%", marginTop:"0.5rem", opacity:loading?0.6:1 }} onClick={handleSubmit} disabled={loading}>
           {loading ? "..." : mode==="login" ? "🔑 Login" : "📝 Register"}
         </button>
-        {mode==="register" && <p style={styles.hint}>Get {(10000).toLocaleString()} points on register!</p>}
+        {mode==="register" && <p style={styles.hint}>Get 20,000 points on register!</p>}
       </div>
     </div>
   );
@@ -87,23 +80,21 @@ function Leaderboard({ onClose }) {
       <div style={{ ...styles.modal, width:"500px", maxHeight:"80vh", overflowY:"auto" }}>
         <h3 style={{ margin:"0 0 1rem", color:"#f0d9b5" }}>🏆 Leaderboard</h3>
         <table style={styles.table}>
-          <thead><tr>{["#","Name","Rating","Points","Games","W/L/D","Win%"].map(h=><th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+          <thead><tr>{["#","Username","Rating","Points","W/L/D"].map(h=><th key={h} style={styles.th}>{h}</th>)}</tr></thead>
           <tbody>
             {data.map((p,i) => {
               const cat = getRatingCategory(p.rating);
               return (
                 <tr key={p.username} style={{ background:i%2===0?"rgba(255,255,255,0.03)":"transparent" }}>
                   <td style={styles.td}>{i+1}</td>
-                  <td style={styles.td}>{p.display_name||p.username}</td>
+                  <td style={styles.td}>{p.username}</td>
                   <td style={{ ...styles.td, color:cat.color, fontWeight:"bold" }}>{p.rating}</td>
                   <td style={{ ...styles.td, color:"#ffd700" }}>{formatPoints(p.points)}</td>
-                  <td style={styles.td}>{p.games}</td>
                   <td style={styles.td}>{p.wins}/{p.losses}/{p.draws}</td>
-                  <td style={styles.td}>{p.win_rate}%</td>
                 </tr>
               );
             })}
-            {!data.length && <tr><td colSpan={7} style={{ ...styles.td, textAlign:"center", opacity:0.5 }}>No games yet</td></tr>}
+            {!data.length && <tr><td colSpan={5} style={{ ...styles.td, textAlign:"center", opacity:0.5 }}>No players yet</td></tr>}
           </tbody>
         </table>
         <button style={{ ...styles.btn, marginTop:"1rem", width:"100%" }} onClick={onClose}>Close</button>
@@ -135,13 +126,14 @@ function AdminPanel({ onClose }) {
       fetch(`${SERVER_URL}/admin/players`, { headers:{ Authorization:`Bearer ${t}` } }).then(r=>r.json()),
       fetch(`${SERVER_URL}/admin/stats`, { headers:{ Authorization:`Bearer ${t}` } }).then(r=>r.json()),
     ]);
-    setPlayers(p); setStats(s);
+    setPlayers(Array.isArray(p) ? p : []);
+    setStats(s);
   };
 
   const adjustPoints = async () => {
     const res = await fetch(`${SERVER_URL}/admin/adjust-points`, { method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${token}`}, body:JSON.stringify({ username:adjustUsername, amount:parseInt(adjustAmount), reason:adjustReason }) });
     const data = await res.json();
-    setMsg(res.ok ? `✅ Done! New points: ${data.newPoints}` : `❌ ${data.error}`);
+    setMsg(res.ok ? `✅ Done! New points: ${formatPoints(data.newPoints)}` : `❌ ${data.error}`);
     if (res.ok) loadData(token);
   };
 
@@ -151,7 +143,7 @@ function AdminPanel({ onClose }) {
         <h3 style={{ margin:"0 0 1rem", color:"#ffd700" }}>⚙️ Admin Panel</h3>
         {!token ? (
           <>
-            <input style={styles.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Admin password" />
+            <input style={styles.input} type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Admin password" onKeyDown={e=>e.key==="Enter"&&loginAdmin()} />
             <button style={{ ...styles.btn, width:"100%", marginTop:"0.5rem" }} onClick={loginAdmin}>Login</button>
             {msg && <p style={{ color:"#ff6060" }}>{msg}</p>}
           </>
@@ -160,10 +152,10 @@ function AdminPanel({ onClose }) {
             {stats && (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:"8px", marginBottom:"1rem" }}>
                 {[
-                  { label:"Total Players", value: stats.totalPlayers ?? stats.totalplayers },
-                  { label:"Total Games", value: stats.totalGames ?? stats.totalgames },
-                  { label:"Platform Fees", value: formatPoints(stats.platformFees ?? stats.platformfees) },
-                  { label:"Total Points", value: formatPoints(stats.totalPoints ?? stats.totalpoints) },
+                  { label:"Total Players", value: stats.totalplayers },
+                  { label:"Total Games", value: stats.totalgames },
+                  { label:"Platform Fees", value: formatPoints(stats.platformfees) },
+                  { label:"Total Points", value: formatPoints(stats.totalpoints) },
                 ].map(s => (
                   <div key={s.label} style={{ background:"rgba(255,255,255,0.05)", padding:"8px 12px", borderRadius:"8px" }}>
                     <div style={{ fontSize:"0.75rem", color:"#a0a0c0" }}>{s.label}</div>
@@ -178,18 +170,19 @@ function AdminPanel({ onClose }) {
               <input style={{ ...styles.input, marginBottom:"6px" }} type="number" value={adjustAmount} onChange={e=>setAdjustAmount(e.target.value)} placeholder="Amount (+/-)" />
               <input style={{ ...styles.input, marginBottom:"6px" }} value={adjustReason} onChange={e=>setAdjustReason(e.target.value)} placeholder="Reason" />
               <button style={{ ...styles.btn, width:"100%" }} onClick={adjustPoints}>Apply</button>
-              {msg && <p style={{ color: msg.startsWith("✅") ? "#4cff90" : "#ff6060", margin:"4px 0 0" }}>{msg}</p>}
+              {msg && <p style={{ color:msg.startsWith("✅")?"#4cff90":"#ff6060", margin:"4px 0 0" }}>{msg}</p>}
             </div>
             <h4 style={{ color:"#f0d9b5", margin:"0 0 8px" }}>All Players ({players.length})</h4>
             <table style={styles.table}>
-              <thead><tr>{["Name","Rating","Points","Games","Joined"].map(h=><th key={h} style={styles.th}>{h}</th>)}</tr></thead>
+              <thead><tr>{["Username","Rating","Points","Games","Referral","Joined"].map(h=><th key={h} style={styles.th}>{h}</th>)}</tr></thead>
               <tbody>
                 {players.map((p,i) => (
                   <tr key={p.username} style={{ background:i%2===0?"rgba(255,255,255,0.03)":"transparent" }}>
-                    <td style={styles.td}>{p.display_name||p.username}<br/><span style={{ fontSize:"0.7rem", color:"#8080a0" }}>{p.username}</span></td>
+                    <td style={styles.td}>{p.username}</td>
                     <td style={{ ...styles.td, color:getRatingCategory(p.rating).color }}>{p.rating}</td>
                     <td style={{ ...styles.td, color:"#ffd700" }}>{formatPoints(p.points)}</td>
                     <td style={styles.td}>{p.games}</td>
+                    <td style={{ ...styles.td, fontSize:"0.75rem", color:"#a0a0c0" }}>{p.referral_code}</td>
                     <td style={{ ...styles.td, fontSize:"0.75rem" }}>{new Date(p.created_at).toLocaleDateString()}</td>
                   </tr>
                 ))}
@@ -208,29 +201,32 @@ function TransferModal({ user, onTransfer, onClose }) {
   const [toUsername, setToUsername] = useState("");
   const [amount, setAmount] = useState("");
   const [msg, setMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleTransfer = async () => {
-    const res = await onTransfer(toUsername, parseInt(amount));
-    if (res.success) setMsg(`✅ Sent ${parseInt(amount).toLocaleString()} points to ${toUsername}`);
+    setLoading(true);
+    const res = await onTransfer(toUsername.toLowerCase(), Number(amount));
+    if (res.success) setMsg(`✅ Sent ${Number(amount).toLocaleString()} pts to ${toUsername}`);
     else setMsg(`❌ ${res.error}`);
+    setLoading(false);
   };
 
   return (
     <div style={styles.modalOverlay}>
       <div style={styles.modal}>
         <h3 style={{ margin:"0 0 1rem", color:"#f0d9b5" }}>💸 Transfer Points</h3>
-        <p style={{ color:"#a0a0c0", marginBottom:"1rem" }}>Your balance: <strong style={{ color:"#ffd700" }}>{formatPoints(user?.points)} pts</strong></p>
+        <p style={{ color:"#a0a0c0", marginBottom:"1rem" }}>Balance: <strong style={{ color:"#ffd700" }}>{formatPoints(user?.points)} pts</strong></p>
         <div style={styles.field}>
           <label style={styles.label}>Recipient username</label>
           <input style={styles.input} value={toUsername} onChange={e=>setToUsername(e.target.value)} placeholder="Username" />
         </div>
         <div style={styles.field}>
-          <label style={styles.label}>Amount (2% fee applies)</label>
+          <label style={styles.label}>Amount (2% fee)</label>
           <input style={styles.input} type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Points to send" />
         </div>
         {msg && <p style={{ color:msg.startsWith("✅")?"#4cff90":"#ff6060" }}>{msg}</p>}
         <div style={{ display:"flex", gap:"8px", marginTop:"0.5rem" }}>
-          <button style={{ ...styles.btn, flex:1 }} onClick={handleTransfer}>Send</button>
+          <button style={{ ...styles.btn, flex:1, opacity:loading?0.6:1 }} onClick={handleTransfer} disabled={loading}>Send</button>
           <button style={{ ...styles.btnOutline, flex:1 }} onClick={onClose}>Cancel</button>
         </div>
       </div>
@@ -250,7 +246,7 @@ function RatingModal({ ratingChanges, escrowResult, myUsername, onClose }) {
         <h3 style={{ margin:"0 0 1rem", color:"#f0d9b5" }}>📊 Game Result</h3>
         {[{label:"Your rating", data:me}, {label:"Opponent", data:opp}].map(({label,data}) => data && (
           <div key={label} style={styles.ratingRow}>
-            <span>{label}:</span>
+            <span>{label} ({data.username}):</span>
             <span>
               <strong>{data.rating}</strong> → <strong>{data.newRating}</strong>
               <span style={{ color:data.change>=0?"#4cff90":"#ff6060", marginLeft:"8px" }}>{data.change>=0?"+":""}{data.change}</span>
@@ -266,7 +262,7 @@ function RatingModal({ ratingChanges, escrowResult, myUsername, onClose }) {
         {escrowResult && (
           <div style={{ background:"rgba(255,215,0,0.1)", border:"1px solid rgba(255,215,0,0.3)", borderRadius:"8px", padding:"10px", marginTop:"10px" }}>
             <div style={{ color:"#ffd700", fontWeight:"bold", marginBottom:"4px" }}>🎰 Bet Result</div>
-            <div style={{ fontSize:"0.9rem" }}>Prize: <strong style={{ color:"#4cff90" }}>{escrowResult.prize?.toLocaleString()} pts</strong></div>
+            <div>Prize: <strong style={{ color:"#4cff90" }}>{escrowResult.prize?.toLocaleString()} pts</strong></div>
             <div style={{ fontSize:"0.85rem", color:"#a0a0c0" }}>Platform fee: {escrowResult.fee?.toLocaleString()} pts (10%)</div>
           </div>
         )}
@@ -298,7 +294,7 @@ function MoveHistory({ moveHistory, currentIndex, onSelect }) {
 }
 
 // ── Lobby ──
-function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh, bonusMsg }) {
+function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh }) {
   const [roomId, setRoomId] = useState("");
   const [timeLimit, setTimeLimit] = useState(10);
   const [bet, setBet] = useState(0);
@@ -307,7 +303,6 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh,
   const [showAdmin, setShowAdmin] = useState(false);
   const [transactions, setTransactions] = useState([]);
   const [showTx, setShowTx] = useState(false);
-  const [notice, setNotice] = useState(bonusMsg || null);
   const cat = getRatingCategory(user.rating || 1200);
   const timeLimits = [{label:"5 min",value:5},{label:"10 min",value:10},{label:"15 min",value:15},{label:"30 min",value:30},{label:"60 min",value:60}];
 
@@ -327,14 +322,14 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh,
         <div style={styles.modalOverlay}>
           <div style={{ ...styles.modal, width:"460px", maxHeight:"80vh", overflowY:"auto" }}>
             <h3 style={{ margin:"0 0 1rem", color:"#f0d9b5" }}>📋 Transaction History</h3>
-            {transactions.map((tx, i) => (
+            {transactions.map((tx,i) => (
               <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:"1px solid rgba(255,255,255,0.08)", fontSize:"0.85rem" }}>
                 <div>
                   <div style={{ color:"#f0d9b5" }}>{tx.description}</div>
                   <div style={{ color:"#8080a0", fontSize:"0.75rem" }}>{new Date(tx.created_at).toLocaleString()}</div>
                 </div>
-                <div style={{ color: tx.amount >= 0 ? "#4cff90" : "#ff6060", fontWeight:"bold" }}>
-                  {tx.amount >= 0 ? "+" : ""}{tx.amount.toLocaleString()}
+                <div style={{ color:Number(tx.amount)>=0?"#4cff90":"#ff6060", fontWeight:"bold" }}>
+                  {Number(tx.amount)>=0?"+":""}{Number(tx.amount).toLocaleString()}
                 </div>
               </div>
             ))}
@@ -346,22 +341,15 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh,
 
       <h1 style={styles.title}>♟️ Online Chess</h1>
 
-      {notice && (
-        <div style={{ background:"rgba(74,124,89,0.3)", border:"1px solid rgba(74,124,89,0.6)", borderRadius:"10px", padding:"10px 20px", marginBottom:"0.5rem", color:"#90ffb0", fontSize:"0.95rem", textAlign:"center" }}>
-          {notice} <button onClick={() => setNotice(null)} style={{ background:"none", border:"none", color:"#90ffb0", cursor:"pointer", marginLeft:"8px", fontSize:"1rem" }}>✕</button>
-        </div>
-      )}
-
-      {/* User info */}
       <div style={styles.userCard}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
-            <div style={{ fontWeight:"bold", fontSize:"1.1rem" }}>{user.displayName || user.username}</div>
-            <div style={{ color:"#e0e0ff", fontSize:"0.95rem", fontWeight:"500" }}>⭐ {user.rating} <span style={{ color:cat.color }}>({cat.label})</span></div>
+            <div style={{ fontWeight:"bold", fontSize:"1.1rem" }}>{user.username}</div>
+            <div style={{ color:cat.color, fontSize:"0.9rem" }}>⭐ {user.rating} <span style={{ opacity:0.7 }}>({cat.label})</span></div>
           </div>
           <div style={{ textAlign:"right" }}>
             <div style={{ color:"#ffd700", fontWeight:"bold", fontSize:"1.1rem" }}>🪙 {formatPoints(user.points)}</div>
-            <div style={{ color:"#a0c0ff", fontSize:"0.85rem", fontWeight:"500", marginTop:"2px" }}>🔗 {user.referralCode}</div>
+            <div style={{ color:"#8080a0", fontSize:"0.75rem" }}>Referral: <strong style={{ color:"#f0d9b5" }}>{user.referralCode}</strong></div>
           </div>
         </div>
         <div style={{ display:"flex", gap:"6px", marginTop:"8px", flexWrap:"wrap" }}>
@@ -387,9 +375,9 @@ function LobbyScreen({ user, onJoin, onLogout, onTransfer, connected, onRefresh,
           </div>
         </div>
         <div style={styles.field}>
-          <label style={styles.label}>🎰 Bet points (optional, 10% fee on win)</label>
+          <label style={styles.label}>🎰 Bet points (optional, 10% fee)</label>
           <input style={styles.input} type="number" value={bet||""} onChange={e=>setBet(parseInt(e.target.value)||0)} placeholder="0 = no bet" min={0} max={user.points} />
-          {bet > 0 && <p style={{ color:"#ffd700", fontSize:"0.8rem", margin:"4px 0 0" }}>If you win: +{Math.floor(bet*1.9*0.9).toLocaleString()} pts (90% of pool)</p>}
+          {bet > 0 && <p style={{ color:"#ffd700", fontSize:"0.8rem", margin:"4px 0 0" }}>If you win: +{Math.floor(bet*1.9*0.9).toLocaleString()} pts</p>}
         </div>
         <button style={{ ...styles.btn, width:"100%", marginTop:"0.5rem", ...(!connected?styles.btnDisabled:{}) }} onClick={() => onJoin(roomId.trim()||generateRoomId(), timeLimit, bet)} disabled={!connected}>
           {connected ? "🎮 Join Game" : "⏳ Connecting..."}
@@ -446,7 +434,7 @@ function TimerDisplay({ time, isActive, color }) {
 }
 
 // ── Game Screen ──
-function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw, onAcceptDraw, onDeclineDraw, onRefresh, onGoLobby }) {
+function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw, onAcceptDraw, onDeclineDraw, onRefresh }) {
   const { fen, myColor, myRating, myPoints, turn, players, message, gameOver, inCheck, isSpectator, roomId, timers, moveHistory, drawOffer, ratingChanges, escrowResult, bets } = gameState;
   const isMyTurn = !isSpectator && myColor === turn;
   const selectedSquareRef = useRef(null);
@@ -454,11 +442,11 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
   const [viewIndex, setViewIndex] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
-  useEffect(() => { if (ratingChanges) { setShowRatingModal(true); onRefresh(); } }, [ratingChanges, onRefresh]);
+  useEffect(() => { if (ratingChanges) { setShowRatingModal(true); onRefresh(); } }, [ratingChanges]);
 
   const isLiveView = viewIndex === null;
   const displayFen = isLiveView ? fen : (moveHistory[viewIndex]?.fen || fen);
-  const totalBet = (bets?.white || 0) + (bets?.black || 0);
+  const totalBet = (Number(bets?.white)||0) + (Number(bets?.black)||0);
 
   const onSquareClick = (sq) => {
     if (!isMyTurn || gameOver || !isLiveView) return;
@@ -481,13 +469,12 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
 
   return (
     <div style={styles.gameContainer}>
-      {showRatingModal && <RatingModal ratingChanges={ratingChanges} escrowResult={escrowResult} myUsername={user?.username} onClose={() => { setShowRatingModal(false); onRefresh(); }} />}
+      {showRatingModal && <RatingModal ratingChanges={ratingChanges} escrowResult={escrowResult} myUsername={user?.username} onClose={() => setShowRatingModal(false)} />}
 
       <div style={styles.header}>
         <span style={styles.roomBadge}>🏠 {roomId}</span>
-        {(user?.points !== undefined || myPoints !== undefined) && <span style={{ ...styles.ratingBadge, color:"#ffd700" }}>🪙 {formatPoints(user?.points ?? myPoints)}</span>}
+        {myPoints !== undefined && <span style={{ ...styles.ratingBadge, color:"#ffd700" }}>🪙 {formatPoints(myPoints)}</span>}
         {myRating && <span style={styles.ratingBadge}>⭐ {myRating}</span>}
-        {user?.referralCode && <span style={{ ...styles.ratingBadge, color:"#a0c0ff", fontSize:"0.75rem" }}>🔗 {user.referralCode}</span>}
         {totalBet > 0 && <span style={{ ...styles.ratingBadge, color:"#ff9f43" }}>🎰 {formatPoints(totalBet)}</span>}
         {!isLiveView && <span style={styles.reviewBadge}>🔍 Review</span>}
       </div>
@@ -556,7 +543,6 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
               {gameOver && <>
                 <button style={styles.btn} onClick={onRestart}>🔄 Play Again</button>
                 {ratingChanges && <button style={{ ...styles.btn,...styles.btnDraw }} onClick={() => setShowRatingModal(true)}>📊 Result</button>}
-                <button style={{ ...styles.btn, background:"linear-gradient(135deg,#2a4a7a,#1a2a5a)" }} onClick={onGoLobby}>🏠 Lobby</button>
               </>}
             </div>
           )}
@@ -570,26 +556,13 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
 
 // ── Main ──
 export default function ChessGame() {
-  const { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw, goToLobby } = useChessSocket();
-  const [bonusMsg, setBonusMsg] = React.useState(null);
+  const { connected, user, authError, authLoading, gameState, register, login, logout, refreshUser, transferPoints, joinRoom, makeMove, resign, restartGame, offerDraw, acceptDraw, declineDraw } = useChessSocket();
 
-  const handleRegister = async (username, password, displayName, referralCode) => {
-    const res = await register(username, password, displayName, referralCode);
-    if (res && res.success) setBonusMsg(`🎉 Бүртгэлийн бонус: +${(10000).toLocaleString()} оноо авлаа!`);
-    return res;
-  };
-
-  const handleLogin = async (username, password) => {
-    const res = await login(username, password);
-    if (res && res.loginBonus && res.loginBonus.claimed) setBonusMsg(`🌟 Өдрийн бонус: +${res.loginBonus.bonus.toLocaleString()} оноо авлаа!`);
-    return res;
-  };
-
-  if (!user) return <AuthScreen onLogin={handleLogin} onRegister={handleRegister} error={authError} loading={authLoading} />;
-  if (gameState.status === "idle") return <LobbyScreen user={user} onJoin={joinRoom} onLogout={logout} onTransfer={transferPoints} connected={connected} onRefresh={refreshUser} bonusMsg={bonusMsg} />;
+  if (!user) return <AuthScreen onLogin={login} onRegister={register} error={authError} loading={authLoading} />;
+  if (gameState.status === "idle") return <LobbyScreen user={user} onJoin={joinRoom} onLogout={logout} onTransfer={transferPoints} connected={connected} onRefresh={refreshUser} />;
   if (gameState.status === "waiting") return <WaitingScreen roomId={gameState.roomId} myColor={gameState.myColor} myRating={gameState.myRating} myPoints={gameState.myPoints} timeLimit={gameState.timeLimit} />;
   if (!gameState.myColor) return <WaitingScreen roomId={gameState.roomId} myColor={null} myRating={gameState.myRating} myPoints={gameState.myPoints} timeLimit={gameState.timeLimit} />;
-  return <GameScreen gameState={gameState} user={user} onMove={makeMove} onResign={resign} onRestart={restartGame} onOfferDraw={offerDraw} onAcceptDraw={acceptDraw} onDeclineDraw={declineDraw} onRefresh={refreshUser} onGoLobby={() => { refreshUser(); goToLobby(); }} />;
+  return <GameScreen gameState={gameState} user={user} onMove={makeMove} onResign={resign} onRestart={restartGame} onOfferDraw={offerDraw} onAcceptDraw={acceptDraw} onDeclineDraw={declineDraw} onRefresh={refreshUser} />;
 }
 
 const styles = {
@@ -652,7 +625,7 @@ const styles = {
   historyMoveActive: { background:"rgba(74,124,89,0.5)",fontWeight:"bold" },
   modalOverlay: { position:"fixed",top:0,left:0,right:0,bottom:0,background:"rgba(0,0,0,0.75)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000 },
   modal: { background:"#16213e",border:"1px solid rgba(240,217,181,0.2)",borderRadius:"16px",padding:"2rem",width:"340px",color:"#f0d9b5" },
-  ratingRow: { display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.1)",fontSize:"0.95rem" },
+  ratingRow: { display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid rgba(255,255,255,0.1)",fontSize:"0.9rem" },
   table: { width:"100%",borderCollapse:"collapse",fontSize:"0.85rem" },
   th: { padding:"8px 6px",textAlign:"left",color:"#c0b090",borderBottom:"1px solid rgba(240,217,181,0.2)" },
   td: { padding:"6px",color:"#f0d9b5" },
