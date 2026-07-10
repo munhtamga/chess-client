@@ -442,7 +442,7 @@ function GameScreen({ gameState, user, onMove, onResign, onRestart, onOfferDraw,
   const [viewIndex, setViewIndex] = useState(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
 
-  useEffect(() => { if (ratingChanges) { setShowRatingModal(true); onRefresh(); } }, [ratingChanges]);
+  useEffect(() => { if (ratingChanges) { setShowRatingModal(true); onRefresh(); } }, [ratingChanges, onRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isLiveView = viewIndex === null;
   const displayFen = isLiveView ? fen : (moveHistory[viewIndex]?.fen || fen);
